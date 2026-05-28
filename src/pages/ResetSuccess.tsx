@@ -1,11 +1,9 @@
 import type { ReactElement } from "react";
+import { useNavigate } from "react-router-dom";
 import { IconCheck, IconHelp, IconMoon } from "../components/AuthIcons";
 
-type ResetSuccessProps = {
-  onBackToLogin?: () => void;
-};
-
-export default function ResetSuccess({ onBackToLogin }: ResetSuccessProps): ReactElement {
+export default function ResetSuccess(): ReactElement {
+  const navigate = useNavigate();
   return (
     <main className="auth-shell auth-detail-shell">
       <span className="auth-brand">flflux.</span>
@@ -33,7 +31,7 @@ export default function ResetSuccess({ onBackToLogin }: ResetSuccessProps): Reac
 
         <p className="success-copy">You can now sign in with your new password.</p>
 
-        <button className="primary-action submit-btn" type="button" onClick={onBackToLogin}>
+        <button className="primary-action submit-btn" type="button" onClick={() => navigate("/login")}>
           Back to Sign In
         </button>
       </section>

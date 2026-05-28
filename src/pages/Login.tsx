@@ -1,6 +1,8 @@
 import type { LoginFlow } from "@ory/client";
 import type { ReactElement } from "react";
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import Divider from "../components/Divider";
 import {
   IconBell,
   IconEye,
@@ -10,120 +12,101 @@ import {
   IconMoon,
   IconPasskey,
 } from "../components/AuthIcons";
-import ory from "../lib/ory";
+import InputField from "../components/InputField";
+import SocialMark from "../components/SocialMark";
+import { signInWithPassword } from "../utils/auth";
+import {
+  getFlowError,
+  hasSocialProvider,
+  submitSocialFlow,
+} from "../utils/flow";
+import ory from "../utils/ory";
 
-type LoginProps = {
-  onSwitchToRegister?: () => void;
-  onSwitchToForgotPassword?: () => void;
-};
-
-type DividerProps = {
-  text: string;
-};
-
-type InputFieldProps = {
-  label: string;
-  type: string;
-  placeholder: string;
-  icon: ReactElement;
-  trailingIcon?: ReactElement;
-  trailingActionLabel?: string;
-  onTrailingAction?: () => void;
-};
-
-type SocialProvider = "google" | "microsoft";
-
-type SocialMarkProps = {
-  provider: SocialProvider;
-};
-
-function Divider({ text }: DividerProps): ReactElement {
-  return (
-    <div className="divider">
-      <span>{text}</span>
-    </div>
-  );
-}
-
-function InputField({
-  label,
-  type,
-  placeholder,
-  icon,
-  trailingIcon,
-  trailingActionLabel,
-  onTrailingAction,
-}: InputFieldProps): ReactElement {
-  return (
-    <label className="field">
-      <span>{label}</span>
-      <div className="input-wrap">
-        <span className="field-icon">{icon}</span>
-        <input type={type} placeholder={placeholder} />
-        {trailingIcon ? (
-          <button
-            className="trailing-icon"
-            type="button"
-            // aria-label={trailingActionLabel}
-            onClick={onTrailingAction}
-          >
-            {trailingIcon}
-          </button>
-        ) : null}
-      </div>
-    </label>
-  );
-}
-
-function SocialMark({ provider }: SocialMarkProps): ReactElement {
-  if (provider === "microsoft") {
-    return (
-      <span className="social-mark microsoft" aria-hidden="true">
-        <i />
-        <i />
-        <i />
-        <i />
-      </span>
-    );
-  }
-
-  return (
-    <span className="social-mark google" aria-hidden="true">
-      G
-    </span>
-  );
-}
-
-export default function Login({ onSwitchToRegister, onSwitchToForgotPassword }: LoginProps) {
+export default function Login(): ReactElement {
+  const navigate = useNavigate();
   const [flow, setFlow] = useState<LoginFlow | null>(null);
-  const [flowError, setFlowError] = useState<string | null>(null);
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [flowError, setFlowError] = useState("");
+  const [isFlowLoading, setIsFlowLoading] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const isGoogleAvailable = hasSocialProvider(flow, "google");
 
   useEffect(() => {
     let active = true;
 
-    ory
-      .createBrowserLoginFlow()
-      .then(({ data }) => {
-        if (active) {
-          setFlow(data);
+    async function loadFlow() {
+      try {
+        const flowId = new URLSearchParams(window.location.search).get("flow");
+        const response = flowId
+          ? await ory.getLoginFlow({ id: flowId })
+          : await ory.createBrowserLoginFlow();
+
+        if (!active) {
+          return;
         }
-      })
-      .catch((err: unknown) => {
-        console.error("Unable to create login flow", err);
-        if (active) {
-          setFlowError("Unable to start the login flow. Check that Ory is running.");
+
+        setFlow(response.data);
+        setFlowError("");
+      } catch (error) {
+        console.error("Unable to create login flow", error);
+        if (!active) {
+          return;
         }
-      });
+
+        const message = getFlowError(error, "login");
+        if (message === "You are already signed in.") {
+          navigate("/dashboard", { replace: true });
+          return;
+        }
+
+        setFlowError(message);
+      } finally {
+        if (active) {
+          setIsFlowLoading(false);
+        }
+      }
+    }
+
+    void loadFlow();
 
     return () => {
       active = false;
     };
-  }, []);
+  }, [navigate]);
+
+  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    if (!flow) {
+      return;
+    }
+
+    setIsSubmitting(true);
+    setFlowError("");
+
+    try {
+      await signInWithPassword({
+        email,
+        password,
+        flow,
+      });
+
+      navigate("/dashboard", { replace: true });
+    } catch (error) {
+      console.error("Unable to sign in", error);
+      setFlowError("Unable to sign in. Please check your email and password.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
 
   return (
     <main className="auth-shell">
-            <span className="auth-brand">flflux.</span>
+      <span className="auth-brand">flflux.</span>
+
       <div className="theme-actions" aria-hidden="true">
         <button className="theme-icon" type="button" aria-label="Notifications">
           <IconBell />
@@ -137,11 +120,11 @@ export default function Login({ onSwitchToRegister, onSwitchToForgotPassword }: 
         <header className="auth-header">
           <h1>Sign In</h1>
           <p>Welcome back! Please enter your details.</p>
-          {flow?.id ? <p>Flow ID: {flow.id}</p> : null}
+          {isFlowLoading ? <p>Connecting to Ory...</p> : null}
           {flowError ? <p>{flowError}</p> : null}
         </header>
 
-        <button className="primary-action" type="button">
+        <button className="primary-action" type="button" title="Passkey UI only for now">
           <span className="btn-icon">
             <IconPasskey />
           </span>
@@ -150,52 +133,72 @@ export default function Login({ onSwitchToRegister, onSwitchToForgotPassword }: 
 
         <Divider text="OR CONTINUE WITH EMAIL" />
 
-        <form className="auth-form">
-          <InputField label="Email" type="email" placeholder="Enter your email" icon={<IconMail />} />
+        <form className="auth-form" onSubmit={handleSubmit}>
+          <InputField
+            label="Email"
+            name="email"
+            type="email"
+            placeholder="Enter your email"
+            icon={<IconMail />}
+            value={email}
+            onChange={(event) => setEmail(event.target.value)}
+          />
 
           <InputField
             label="Password"
+            name="password"
             type={showPassword ? "text" : "password"}
             placeholder="Enter your password"
             icon={<IconLock />}
+            value={password}
+            onChange={(event) => setPassword(event.target.value)}
             trailingIcon={showPassword ? <IconEyeOff /> : <IconEye />}
-            // trailingActionLabel={showPassword ? "Hide password" : "Show password"}
             onTrailingAction={() => setShowPassword((value) => !value)}
           />
 
           <div className="form-meta">
-            <label className="checkbox">
-              <input type="checkbox" />
-              <span>Remember me</span>
-            </label>
             <a
               href="/forgot-password"
               onClick={(event) => {
                 event.preventDefault();
-                onSwitchToForgotPassword?.();
+                navigate("/forgot-password");
               }}
             >
               Forgot password?
             </a>
           </div>
 
-          <button className="primary-action submit-btn" type="submit">
-            Sign In
+          <button
+            className="primary-action submit-btn"
+            type="submit"
+            disabled={!flow || isFlowLoading || isSubmitting}
+          >
+            {isSubmitting ? "Signing in..." : "Sign In"}
           </button>
         </form>
 
         <Divider text="Or Login With" />
 
         <div className="social-row">
-          <button className="social-btn" type="button">
+          <button
+            className="social-btn"
+            type="button"
+            onClick={() => submitSocialFlow(flow, "google")}
+            disabled={!flow || isFlowLoading || !isGoogleAvailable}
+            title={
+              !isGoogleAvailable && !isFlowLoading
+                ? "Google sign-in is not enabled on the current Ory server."
+                : undefined
+            }
+          >
             <SocialMark provider="google" />
             Google
           </button>
-          <button className="social-btn" type="button">
-            <SocialMark provider="microsoft" />
-            Microsoft
-          </button>
         </div>
+
+        {!isFlowLoading && !isGoogleAvailable ? (
+          <p>Google sign-in is not enabled on the Ory server currently configured for this app.</p>
+        ) : null}
 
         <p className="signup-copy">
           Don&apos;t have an account?{" "}
@@ -203,7 +206,7 @@ export default function Login({ onSwitchToRegister, onSwitchToForgotPassword }: 
             href="/register"
             onClick={(event) => {
               event.preventDefault();
-              onSwitchToRegister?.();
+              navigate("/register");
             }}
           >
             Sign Up

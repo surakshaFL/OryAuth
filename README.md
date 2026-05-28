@@ -37,22 +37,36 @@ Sample Kratos files live in [`kratos/`](./kratos):
 Create a Google OAuth client and add this redirect URI exactly:
 
 ```text
-http://127.0.0.1:4433/self-service/methods/oidc/callback/google
+http://127.0.0.1:5443/self-service/methods/oidc/callback/google
 ```
 
-Then replace the placeholders in `kratos.yml`:
+Then create a local `.env` file from `.env.example` and fill in:
 
-- `YOUR_GOOGLE_CLIENT_ID`
-- `YOUR_GOOGLE_CLIENT_SECRET`
+```bash
+cp .env.example .env
+```
+
+```text
+GOOGLE_CLIENT_ID=your-google-client-id.apps.googleusercontent.com
+GOOGLE_CLIENT_SECRET=your-google-client-secret
+```
+
+`docker-compose.yml` passes those env vars into the Kratos container, and [`kratos/start.sh`](/home/suraksha/Projects/OryAuth/kratos/start.sh:1) renders the final runtime config so the Google credentials are not hardcoded in git.
 
 The OIDC `session` hook is included so users who sign up with Google are logged in immediately after registration.
 
 ### 3. Run Ory locally
 
+Start Kratos with:
+
+```bash
+docker compose up -d
+```
+
 This project expects the Ory frontend API to be available locally at:
 
 ```text
-http://127.0.0.1:4433
+http://127.0.0.1:5443
 ```
 
 The Vite dev server proxies requests from `/ory` to that address. That proxy is configured in [vite.config.ts](/home/suraksha/Projects/OryAuth/vite.config.ts:1).
@@ -66,8 +80,8 @@ npm run dev
 Then open:
 
 ```text
-http://127.0.0.1:3000/login
-http://127.0.0.1:3000/register
+http://127.0.0.1:4455/login
+http://127.0.0.1:4455/register
 ```
 
 ### 5. Build for production

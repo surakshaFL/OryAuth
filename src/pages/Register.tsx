@@ -1,6 +1,8 @@
+import type { RegistrationFlow } from "@ory/client";
 import type { ReactElement } from "react";
-import { useState, useEffect } from "react";
-import ory from "../lib/ory";
+import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import Divider from "../components/Divider";
 import {
   IconEye,
   IconEyeOff,
@@ -10,151 +12,105 @@ import {
   IconMoon,
   IconUser,
 } from "../components/AuthIcons";
+import InputField from "../components/InputField";
+import SocialMark from "../components/SocialMark";
+import { registerWithPassword } from "../utils/auth";
+import {
+  getFlowError,
+  hasSocialProvider,
+  submitSocialFlow,
+} from "../utils/flow";
+import ory from "../utils/ory";
 
-type RegisterProps = {
-  onSwitchToLogin?: () => void;
-};
-
-type InputFieldProps = {
-  label: string;
-  type: string;
-  placeholder: string;
-  icon: ReactElement;
-  value?: string;
-  onChange?: (event: React.ChangeEvent<HTMLInputElement>) => void;
-  trailingIcon?: ReactElement;
-  trailingActionLabel?: string;
-  onTrailingAction?: () => void;
-};
-
-type handleRegisterProps = {
-  flowId: string;
-  email: string;
-  password: string;
-  confirmPassword: string;
-  fullName: string;
-};
-
-type SocialProvider = "google" | "microsoft";
-
-type SocialMarkProps = {
-  provider: SocialProvider;
-};
-
-function InputField({
-  label,
-  type,
-  value,
-  onChange,
-  placeholder,
-  icon,
-  trailingIcon,
-  trailingActionLabel,
-  onTrailingAction,
-}: InputFieldProps): ReactElement {
-  return (
-    <label className="field">
-      <span>{label}</span>
-      <div className="input-wrap">
-        <span className="field-icon">{icon}</span>
-        <input
-          type={type}
-          placeholder={placeholder}
-          value={value}
-          onChange={onChange}
-        />
-        {trailingIcon ? (
-          <button
-            className="trailing-icon"
-            type="button"
-            aria-label={trailingActionLabel}
-            onClick={onTrailingAction}
-          >
-            {trailingIcon}
-          </button>
-        ) : null}
-      </div>
-    </label>
-  );
-}
-
-function SocialMark({ provider }: SocialMarkProps): ReactElement {
-  if (provider === "microsoft") {
-    return (
-      <span className="social-mark microsoft" aria-hidden="true">
-        <i />
-        <i />
-        <i />
-        <i />
-      </span>
-    );
-  }
-
-  return (
-    <span className="social-mark google" aria-hidden="true">
-      G
-    </span>
-  );
-}
-
-const handleRegister = async (
-  event: React.FormEvent<HTMLFormElement>,
-  password: string,
-  confirmPassword: string,
-  fullName: string,
-  email: string,
-  flowId: string,
-) => {
-  event.preventDefault();
-
-  if (password !== confirmPassword) {
-    alert("Passwords do not match");
-    return;
-  }
-
-  try {
-    const response = await ory.updateRegistrationFlow({
-      flow: flowId,
-      updateRegistrationFlowBody: {
-        method: "password",
-        password,
-        traits: {
-          email,
-          full_name: fullName,
-        },
-      },
-    });
-
-    console.log("User Registered:", response.data);
-
-    alert("Registration successful");
-  } catch (error) {
-    console.error(error, "axios i think");
-    // console.log(error.response?.data);
-  }
-};
-
-export default function Register({
-  onSwitchToLogin,
-}: RegisterProps): ReactElement {
-  const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+export default function Register(): ReactElement {
+  const navigate = useNavigate();
+  const [flow, setFlow] = useState<RegistrationFlow | null>(null);
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-  const [flowId, setFlowId] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [flowError, setFlowError] = useState("");
+  const [isFlowLoading, setIsFlowLoading] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const isGoogleAvailable = hasSocialProvider(flow, "google");
 
   useEffect(() => {
-    ory
-      .createBrowserRegistrationFlow()
-      .then(({ data }) => {
-        setFlowId(data.id);
-      })
-      .catch((error) => {
-        console.error(error);
+    let active = true;
+
+    async function loadFlow() {
+      try {
+        const flowId = new URLSearchParams(window.location.search).get("flow");
+        const response = flowId
+          ? await ory.getRegistrationFlow({ id: flowId })
+          : await ory.createBrowserRegistrationFlow();
+
+        if (!active) {
+          return;
+        }
+
+        setFlow(response.data);
+        setFlowError("");
+      } catch (error) {
+        console.error("Unable to create registration flow", error);
+        if (!active) {
+          return;
+        }
+
+        const message = getFlowError(error, "registration");
+        if (message === "You are already signed in.") {
+          navigate("/dashboard", { replace: true });
+          return;
+        }
+
+        setFlowError(message);
+      } finally {
+        if (active) {
+          setIsFlowLoading(false);
+        }
+      }
+    }
+
+    void loadFlow();
+
+    return () => {
+      active = false;
+    };
+  }, [navigate]);
+
+  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    if (!flow) {
+      return;
+    }
+
+    if (password !== confirmPassword) {
+      setFlowError("Passwords do not match.");
+      return;
+    }
+
+    setIsSubmitting(true);
+    setFlowError("");
+
+    try {
+      await registerWithPassword({
+        fullName,
+        email,
+        password,
+        flow,
       });
-  }, []);
+
+      navigate("/login", { replace: true });
+    } catch (error) {
+      console.error("Unable to create account", error);
+      setFlowError("Unable to create account. Please check your details.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
 
   return (
     <main className="auth-shell register-shell">
@@ -169,96 +125,95 @@ export default function Register({
         </button>
       </div>
 
-      <section
-        className="auth-card register-card"
-        aria-label="Create account form"
-      >
+      <section className="auth-card register-card" aria-label="Create account form">
         <header className="auth-header">
           <h1>Create Account</h1>
           <p>Sign up to get started with your account.</p>
+          {isFlowLoading ? <p>Connecting to Ory...</p> : null}
+          {flowError ? <p>{flowError}</p> : null}
         </header>
 
-        <form
-          className="auth-form"
-          onSubmit={(e) =>
-            handleRegister(
-              e,
-              password,
-              confirmPassword,
-              fullName,
-              email,
-              flowId,
-            )
-          }
-        >
-        
+        <form className="auth-form" onSubmit={handleSubmit}>
           <InputField
             label="Full Name"
+            name="fullName"
             type="text"
             placeholder="Enter your full name"
             icon={<IconUser />}
             value={fullName}
-            onChange={(e) => setFullName(e.target.value)}
+            onChange={(event) => setFullName(event.target.value)}
           />
-        
+
           <InputField
             label="Email"
+            name="email"
             type="email"
             placeholder="Enter your email"
             icon={<IconMail />}
             value={email}
-            onChange={(e) => setEmail(e.target.value)}
+            onChange={(event) => setEmail(event.target.value)}
           />
+
           <InputField
             label="Password"
+            name="password"
             type={showPassword ? "text" : "password"}
             placeholder="Create a password"
             icon={<IconLock />}
             value={password}
-            onChange={(e) => setPassword(e.target.value)}
+            onChange={(event) => setPassword(event.target.value)}
             trailingIcon={showPassword ? <IconEyeOff /> : <IconEye />}
-            trailingActionLabel={
-              showPassword ? "Hide password" : "Show password"
-            }
             onTrailingAction={() => setShowPassword((value) => !value)}
           />
+
           <InputField
             label="Confirm Password"
+            name="confirmPassword"
             type={showConfirmPassword ? "text" : "password"}
             placeholder="Confirm your password"
             icon={<IconLock />}
             value={confirmPassword}
-            onChange={(e) => setConfirmPassword(e.target.value)}
+            onChange={(event) => setConfirmPassword(event.target.value)}
             trailingIcon={showConfirmPassword ? <IconEyeOff /> : <IconEye />}
-            trailingActionLabel={
-              showConfirmPassword ? "Hide password" : "Show password"
-            }
             onTrailingAction={() => setShowConfirmPassword((value) => !value)}
           />
+
           <p className="legal-copy">
             I agree to the <a href="/">Terms of Service</a> and{" "}
             <a href="/">Privacy Policy</a>
           </p>
 
-          <button className="primary-action submit-btn" type="submit">
-            Create Account
+          <button
+            className="primary-action submit-btn"
+            type="submit"
+            disabled={!flow || isFlowLoading || isSubmitting}
+          >
+            {isSubmitting ? "Creating account..." : "Create Account"}
           </button>
         </form>
 
-        <div className="divider signup-divider">
-          <span>Or Sign Up With</span>
-        </div>
+        <Divider text="Or Sign Up With" />
 
         <div className="social-row">
-          <button className="social-btn" type="button">
+          <button
+            className="social-btn"
+            type="button"
+            onClick={() => submitSocialFlow(flow, "google")}
+            disabled={!flow || isFlowLoading || !isGoogleAvailable}
+            title={
+              !isGoogleAvailable && !isFlowLoading
+                ? "Google sign-up is not enabled on the current Ory server."
+                : undefined
+            }
+          >
             <SocialMark provider="google" />
             Google
           </button>
-          <button className="social-btn" type="button">
-            <SocialMark provider="microsoft" />
-            Microsoft
-          </button>
         </div>
+
+        {!isFlowLoading && !isGoogleAvailable ? (
+          <p>Google sign-up is not enabled on the Ory server currently configured for this app.</p>
+        ) : null}
 
         <p className="signup-copy">
           Already have an account?{" "}
@@ -266,7 +221,7 @@ export default function Register({
             href="/login"
             onClick={(event) => {
               event.preventDefault();
-              onSwitchToLogin?.();
+              navigate("/login");
             }}
           >
             Sign In

@@ -1,15 +1,9 @@
 import type { ReactElement } from "react";
+import { useNavigate } from "react-router-dom";
 import { IconHelp, IconMail, IconMoon } from "../components/AuthIcons";
 
-type ForgotPasswordProps = {
-  onBackToLogin?: () => void;
-  onContinueToVerify?: () => void;
-};
-
-export default function ForgotPassword({
-  onBackToLogin,
-  onContinueToVerify,
-}: ForgotPasswordProps): ReactElement {
+export default function ForgotPassword(): ReactElement {
+  const navigate = useNavigate();
   return (
     <main className="auth-shell auth-detail-shell">
       <span className="auth-brand">flflux.</span>
@@ -33,7 +27,7 @@ export default function ForgotPassword({
           className="auth-form"
           onSubmit={(event) => {
             event.preventDefault();
-            onContinueToVerify?.();
+            navigate("/verify-email");
           }}
         >
           <label className="field">
@@ -55,7 +49,7 @@ export default function ForgotPassword({
           className="back-link"
           type="button"
           onClick={() => {
-            onBackToLogin?.();
+            navigate("/login");
           }}
         >
           ← Back to Sign In

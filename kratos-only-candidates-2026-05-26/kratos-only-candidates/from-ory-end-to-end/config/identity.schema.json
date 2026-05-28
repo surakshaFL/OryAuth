@@ -1,0 +1,26 @@
+{
+  "id": "local-account",
+  "title": "Local Account Schema",
+  "required_traits": [
+    "email",
+    "display_name"
+  ],
+  "min_password_length": 7,
+  "traits": [
+    {
+      "name": "email",
+      "type": "email",
+      "description": "Unique sign-in identifier and verification target."
+    },
+    {
+      "name": "display_name",
+      "type": "string",
+      "description": "User-facing profile label shown in the consent and admin screens."
+    },
+    {
+      "name": "password",
+      "type": "password",
+      "description": "Local password used for self-service sign-in and settings changes."
+    }
+  ]
+}

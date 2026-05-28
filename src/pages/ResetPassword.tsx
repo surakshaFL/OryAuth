@@ -1,10 +1,7 @@
 import type { ReactElement } from "react";
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { IconEye, IconHelp, IconLock, IconMoon ,IconEyeOff} from "../components/AuthIcons";
-
-type ResetPasswordProps = {
-  onResetComplete?: () => void;
-};
 
 type PasswordFieldProps = {
   label: string;
@@ -40,7 +37,8 @@ function PasswordField({
   );
 }
 
-export default function ResetPassword({ onResetComplete }: ResetPasswordProps): ReactElement {
+export default function ResetPassword(): ReactElement {
+  const navigate = useNavigate();
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
@@ -67,7 +65,7 @@ export default function ResetPassword({ onResetComplete }: ResetPasswordProps): 
           className="auth-form reset-form"
           onSubmit={(event) => {
             event.preventDefault();
-            onResetComplete?.();
+            navigate("/reset-success");
           }}
         >
           <PasswordField

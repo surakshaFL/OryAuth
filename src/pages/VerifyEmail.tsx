@@ -1,18 +1,12 @@
 import type { ChangeEvent, KeyboardEvent, ReactElement } from "react";
 import { useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { IconHelp, IconMoon } from "../components/AuthIcons";
-
-type VerifyEmailProps = {
-  onBackToLogin?: () => void;
-  onContinueToReset?: () => void;
-};
 
 const OTP_LENGTH = 6;
 
-export default function VerifyEmail({
-  onBackToLogin,
-  onContinueToReset,
-}: VerifyEmailProps): ReactElement {
+export default function VerifyEmail(): ReactElement {
+  const navigate = useNavigate();
   const [code, setCode] = useState<string[]>(["", "", "", "", "", ""]);
   const inputRefs = useRef<Array<HTMLInputElement | null>>([]);
 
@@ -60,7 +54,7 @@ export default function VerifyEmail({
           className="auth-form verify-form"
           onSubmit={(event) => {
             event.preventDefault();
-            onContinueToReset?.();
+            navigate("/reset-password");
           }}
         >
           <div className="otp-row" aria-label="Verification code">
@@ -93,7 +87,7 @@ export default function VerifyEmail({
           className="back-link"
           type="button"
           onClick={() => {
-            onBackToLogin?.();
+            navigate("/login");
           }}
         >
           Back to Sign In
