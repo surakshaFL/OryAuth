@@ -5,7 +5,7 @@ A React + Vite authentication UI wired to Ory browser flows.
 ## Features
 
 - Register and login screens backed by Ory browser flows
-- Google social sign-in via Ory Kratos OIDC
+- Google and GitHub social sign-in via Ory Kratos OIDC
 - Forgot password flow
 - Email verification screen
 - Reset password flow
@@ -26,18 +26,25 @@ A React + Vite authentication UI wired to Ory browser flows.
 npm install
 ```
 
-### 2. Configure Kratos for Google sign-in
+### 2. Configure Kratos for social sign-in
 
 Sample Kratos files live in [`kratos/`](./kratos):
 
 - [`kratos/kratos.yml`](/home/suraksha/Projects/OryAuth/kratos/kratos.yml:1)
 - [`kratos/identity.schema.json`](/home/suraksha/Projects/OryAuth/kratos/identity.schema.json:1)
 - [`kratos/google.mapper.jsonnet`](/home/suraksha/Projects/OryAuth/kratos/google.mapper.jsonnet:1)
+- [`kratos/github.mapper.jsonnet`](/home/suraksha/Projects/OryAuth/kratos/github.mapper.jsonnet:1)
 
 Create a Google OAuth client and add this redirect URI exactly:
 
 ```text
 http://127.0.0.1:5443/self-service/methods/oidc/callback/google
+```
+
+If you also want GitHub sign-in, create a GitHub OAuth app and add this callback URL exactly:
+
+```text
+http://127.0.0.1:5443/self-service/methods/oidc/callback/github
 ```
 
 Then create a local `.env` file from `.env.example` and fill in:
@@ -49,11 +56,13 @@ cp .env.example .env
 ```text
 GOOGLE_CLIENT_ID=your-google-client-id.apps.googleusercontent.com
 GOOGLE_CLIENT_SECRET=your-google-client-secret
+GITHUB_CLIENT_ID=your-github-client-id
+GITHUB_CLIENT_SECRET=your-github-client-secret
 ```
 
-`docker-compose.yml` passes those env vars into the Kratos container, and [`kratos/start.sh`](/home/suraksha/Projects/OryAuth/kratos/start.sh:1) renders the final runtime config so the Google credentials are not hardcoded in git.
+`docker-compose.yml` passes those env vars into the Kratos container, and [`kratos/start.sh`](/home/suraksha/Projects/OryAuth/kratos/start.sh:1) renders the final runtime config so provider credentials are not hardcoded in git.
 
-The OIDC `session` hook is included so users who sign up with Google are logged in immediately after registration.
+The OIDC `session` hook is included so users who sign up with Google or GitHub are logged in immediately after registration.
 
 ### 3. Run Ory locally
 

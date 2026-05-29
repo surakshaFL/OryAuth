@@ -409,6 +409,11 @@ a {
   cursor: pointer;
 }
 
+.social-btn:disabled {
+  opacity: 0.62;
+  cursor: not-allowed;
+}
+
 .social-mark {
   display: inline-grid;
   place-items: center;
@@ -422,34 +427,16 @@ a {
   color: #4285f4;
 }
 
-.social-mark.microsoft {
-  grid-template-columns: repeat(2, 6px);
-  grid-template-rows: repeat(2, 6px);
-  gap: 2px;
-  width: auto;
-  height: auto;
+.social-mark.github {
+  width: 18px;
+  height: 18px;
+  color: #111827;
 }
 
-.social-mark.microsoft i {
+.social-mark.github svg {
+  width: 100%;
+  height: 100%;
   display: block;
-  width: 6px;
-  height: 6px;
-}
-
-.social-mark.microsoft i:nth-child(1) {
-  background: #f25022;
-}
-
-.social-mark.microsoft i:nth-child(2) {
-  background: #7fba00;
-}
-
-.social-mark.microsoft i:nth-child(3) {
-  background: #00a4ef;
-}
-
-.social-mark.microsoft i:nth-child(4) {
-  background: #ffb900;
 }
 
 .signup-copy {

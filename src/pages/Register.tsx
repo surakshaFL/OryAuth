@@ -19,6 +19,7 @@ import {
   getFlowError,
   getSocialProviderLabel,
   getSocialProviders,
+  SUPPORTED_SOCIAL_PROVIDERS,
   submitSocialFlow,
 } from "../utils/flow";
 import ory from "../utils/ory";
@@ -36,7 +37,7 @@ export default function Register(): ReactElement {
   const [isFlowLoading, setIsFlowLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const socialProviders = getSocialProviders(flow);
+  const socialProviders = SUPPORTED_SOCIAL_PROVIDERS;
 
   useEffect(() => {
     let active = true;
@@ -213,10 +214,6 @@ export default function Register(): ReactElement {
             );
           })}
         </div>
-
-        {!isFlowLoading && socialProviders.length === 0 ? (
-          <p>No social sign-up providers are enabled on the Ory server currently configured for this app.</p>
-        ) : null}
 
         <p className="signup-copy">
           Already have an account?{" "}

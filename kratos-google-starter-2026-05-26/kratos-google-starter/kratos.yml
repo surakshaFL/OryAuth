@@ -48,6 +48,11 @@ selfservice:
               - openid
               - email
               - profile
+               - id: github
+            provider: github
+            client_id: GITHUB_CLIENT_ID
+            client_secret: GITHUB_CLIENT_SECRET
+            mapper_url: file:///etc/config/kratos/github-mapper.jsonnet
   flows:
     error:
       ui_url: http://127.0.0.1:3000/error

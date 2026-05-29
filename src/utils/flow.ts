@@ -3,6 +3,10 @@ import type { LoginFlow, RegistrationFlow, UiNode } from "@ory/client";
 type Flow = LoginFlow | RegistrationFlow;
 
 export type SocialProvider = string;
+export const SUPPORTED_SOCIAL_PROVIDERS: SocialProvider[] = [
+  "google",
+  "github",
+];
 
 type InputNode = UiNode & {
   attributes: {
@@ -61,6 +65,10 @@ export function getSocialProviders(flow: Flow | null): SocialProvider[] {
 }
 
 export function getSocialProviderLabel(provider: SocialProvider): string {
+  if (provider === "github") {
+    return "GitHub";
+  }
+
   return provider
     .split(/[_-]+/)
     .filter(Boolean)

@@ -46,25 +46,7 @@ selfservice:
       enabled: true
       config:
         providers:
-          - id: google
-            provider: google
-            client_id: __GOOGLE_CLIENT_ID__
-            client_secret: __GOOGLE_CLIENT_SECRET__
-            issuer_url: https://accounts.google.com
-            mapper_url: file:///etc/config/kratos/google.mapper.jsonnet
-            scope:
-              - openid
-              - email
-              - profile
-            requested_claims:
-              id_token:
-                email:
-                  essential: true
-                email_verified:
-                  essential: true
-                given_name:
-                  essential: true
-                family_name: null
+__OIDC_PROVIDERS__
   flows:
     error:
       ui_url: http://127.0.0.1:4455/error
