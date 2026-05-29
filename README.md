@@ -66,10 +66,18 @@ The OIDC `session` hook is included so users who sign up with Google or GitHub a
 
 ### 3. Run Ory locally
 
-Start Kratos with:
+Start the repo's local Kratos setup with:
 
 ```bash
 docker compose up -d
+```
+
+If you are following an Ory quickstart file instead of this repo's
+[`docker-compose.yml`](/home/suraksha/Projects/OryAuth/docker-compose.yml:1),
+start it with:
+
+```bash
+docker compose -f quickstart.yml up
 ```
 
 This project expects the Ory frontend API to be available locally at:
